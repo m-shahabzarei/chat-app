@@ -1,10 +1,14 @@
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getServerSession } from "next-auth/next"; // مهم
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session) return new Response("Unauthorized", { status: 401 });
+
+  if (!session) {
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
 
   const { id } = await req.json();
 
@@ -12,16 +16,17 @@ export async function POST(req: Request) {
     where: { id },
   });
 
-  // اگر پیام وجود نداشت
-  if (!message) return new Response("Not Found", { status: 404 });
+  if (!message) {
+    return new NextResponse("Not Found", { status: 404 });
+  }
 
-  // فقط صاحب پیام می‌تونه حذف کنه
-  if (message.userId !== session.user.id)
-    return new Response("Forbidden", { status: 403 });
+  if (message.userId !== session.user.id) {
+    return new NextResponse("Forbidden", { status: 403 });
+  }
 
   await prisma.message.delete({
     where: { id },
   });
 
-  return Response.json({ success: true });
+  return NextResponse.json({ success: true });
 }
