@@ -1,10 +1,10 @@
-import { authOptions } from "@/lib/auth";
-import { getServerSession } from "next-auth/next"; // مهم
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
+import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  // گرفتن سشن به شیوه درست NextAuth v5
+  const session = await auth();
 
   if (!session) {
     return new NextResponse("Unauthorized", { status: 401 });
@@ -12,21 +12,18 @@ export async function POST(req: Request) {
 
   const { id } = await req.json();
 
-  const message = await prisma.message.findUnique({
-    where: { id },
-  });
-
-  if (!message) {
-    return new NextResponse("Not Found", { status: 404 });
+  if (!id) {
+    return new NextResponse("Message ID is required", { status: 400 });
   }
 
-  if (message.userId !== session.user.id) {
-    return new NextResponse("Forbidden", { status: 403 });
+  try {
+    await prisma.message.delete({
+      where: { id },
+    });
+
+    return new NextResponse("Message deleted successfully", { status: 200 });
+  } catch (error) {
+    console.error("Delete message error:", error);
+    return new NextResponse("Server error", { status: 500 });
   }
-
-  await prisma.message.delete({
-    where: { id },
-  });
-
-  return NextResponse.json({ success: true });
 }
